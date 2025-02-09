@@ -11,7 +11,6 @@ import (
 type Client struct {
 	cache pokecache.Cache
 	httpClient http.Client
-
 }
 
 // NewClient -
