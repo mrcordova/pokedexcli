@@ -1,51 +1,40 @@
 package main
 
 import (
-	"encoding/json"
+	"errors"
 	"fmt"
-	"io"
-	"net/http"
 )
 
-func commandMap(config *Config) error {
-	next := config.Next
-	endpoint_url := POKEDEX_URL + "/location-area"
-	if next != "" {
-		endpoint_url = next
-	} 
-	
-	
+func commandMapf(cfg *config) error {
+	locationsResp, err := cfg.pokeapiClient.ListLocations(cfg.nextLocationsURL)
+	if err != nil {
+		return err
+	}
 
-	return printMapResults(endpoint_url, config)
+	cfg.nextLocationsURL = locationsResp.Next
+	cfg.prevLocationsURL = locationsResp.Previous
+
+	for _, loc := range locationsResp.Results {
+		fmt.Println(loc.Name)
+	}
+	return nil
 }
 
-func printMapResults(url string, config *Config)  error {
-	res, err := http.Get(url)
-	if err != nil {
-		return err
+func commandMapb(cfg *config) error {
+	if cfg.prevLocationsURL == nil {
+		return errors.New("you're on the first page")
 	}
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		return err
-	}
-	defer res.Body.Close()
-	if res.StatusCode > 299 {
-		return fmt.Errorf("status: %v %v", res.StatusCode, res.Status )
-	}
-	locationResponse := PokedexResponse{}
-	err = json.Unmarshal(body, &locationResponse)
 
+	locationResp, err := cfg.pokeapiClient.ListLocations(cfg.prevLocationsURL)
 	if err != nil {
 		return err
 	}
 
-	config.Next = locationResponse.Next
-	config.Previous = locationResponse.Previous
-	results := locationResponse.Results
+	cfg.nextLocationsURL = locationResp.Next
+	cfg.prevLocationsURL = locationResp.Previous
 
-	for _, result := range results {
-		fmt.Println(result.Name)
-
+	for _, loc := range locationResp.Results {
+		fmt.Println(loc.Name)
 	}
 	return nil
 }
